@@ -1,21 +1,18 @@
 package main
 
 import (
+	"YT2MP3/utils"
 	"bufio"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
-
-	"YT2MP3/utils"
 )
 
 const (
 	reset = "\x1b[0m"
 )
-
-var option string
 
 func Clear() {
 	cmd := exec.Command("cmd", "/c", "cls")
@@ -31,7 +28,7 @@ YT To MP3 ©
                  │ ┓┏ ┏┳┓  ┏┳┓┏┓   ┳┳┓ ┏┓ ┏┓ │
                  │ ┗┫  ┃    ┃ ┃┃   ┃┃┃ ┣┛  ┫ │
                  │ ┗┛  ┻    ┻ ┗┛   ┛ ┗ ┃  ┗┛ │
-                 │        Version 2.0        │
+                 │        Version 2.1        │
                  └───────────────────────────┘
 
  [1] Download Beat
@@ -42,8 +39,18 @@ YT To MP3 ©
 }
 
 func download(link, path string) error {
-	if _, err := exec.LookPath("yt-dlp"); err != nil {
-		return fmt.Errorf("yt-dlp is not installed. install it from https://github.com/yt-dlp/yt-dlp and place the /bin in /utils/ffmpeg")
+	var ytDlpCmd string
+
+	// Try global yt-dlp
+	if path, err := exec.LookPath("yt-dlp"); err == nil {
+		ytDlpCmd = path
+	} else {
+		// Fall back to local yt-dlp.exe
+		localYtDlp := filepath.Join("utils", "ffmpeg", "yt-dlp.exe")
+		if _, err := os.Stat(localYtDlp); os.IsNotExist(err) {
+			return fmt.Errorf("yt-dlp is not installed. Install it from https://github.com/yt-dlp/yt-dlp and place the binary in utils/ffmpeg")
+		}
+		ytDlpCmd = localYtDlp
 	}
 
 	ffmpegPath := filepath.Join("utils", "ffmpeg", "ffmpeg.exe")
@@ -57,7 +64,7 @@ func download(link, path string) error {
 		return fmt.Errorf("could not find downloads folder: %v", err)
 	}
 
-	cmd := exec.Command("yt-dlp", "-x", "--audio-format", "mp3", "--ffmpeg-location", absFfmpegPath, "-o", absPath, link)
+	cmd := exec.Command(ytDlpCmd, "-x", "--audio-format", "mp3", "--ffmpeg-location", absFfmpegPath, "-o", absPath, link)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
